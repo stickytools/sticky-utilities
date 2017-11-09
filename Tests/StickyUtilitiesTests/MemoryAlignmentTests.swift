@@ -32,7 +32,7 @@ import StickyUtilities
 ///
 /// Internal test structure.
 ///
-fileprivate struct SimpleStruct {
+private struct SimpleStruct {
     var boolVar: Bool
 }
 
@@ -41,7 +41,7 @@ fileprivate struct SimpleStruct {
 ///
 /// Internal test structure.
 ///
-fileprivate struct UnpackedStruct {
+private struct UnpackedStruct {
 	var boolVar: Bool
 	var intVar: Int
 	var doubleVar: Double
