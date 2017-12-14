@@ -2,20 +2,35 @@ cmake_minimum_required(VERSION 3.9)
 
 project(Sticky LANGUAGES NONE)
 
+message(STATUS "Configuring Sticky for ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "")
+
+include(ExternalProject)
+
+#
+# Tool paths.
+#
+set(BUILD_TOOLS_ROOT ${CMAKE_SOURCE_DIR}/.build-tools)
+set(BUILD_TOOLS_BIN  ${CMAKE_SOURCE_DIR}/.build-tools/usr/local/build-tools/bin)
+
+ExternalProject_Add(
+        build-tools
+        PREFIX ${BUILD_TOOLS_ROOT}
+        GIT_REPOSITORY https://github.com/tonystone/build-tools.git
+        GIT_TAG master
+        EXCLUDE_FROM_ALL 1
+        BUILD_COMMAND ""
+        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${BUILD_TOOLS_ROOT}/src/build-tools
+        UPDATE_COMMAND ""
+        INSTALL_COMMAND make DESTDIR=${BUILD_TOOLS_ROOT} install
+)
+
 #
 # Build tool paths.
 #
-set(BUILDDIR .build/debug)
-set(GYBTOOL "${CMAKE_SOURCE_DIR}/.build-tools/.build/bin/gyb")
-set(LINUXMAINTOOL "${CMAKE_SOURCE_DIR}/.build-tools/linux/generate_xctest_runner.rb")
-
-if(NOT EXISTS "${GYBTOOL}")
-    message(FATAL_ERROR "Gyb is not installed at '${GYBTOOL}', CMake will exit." )
-endif()
-
-if(NOT EXISTS "${LINUXMAINTOOL}")
-    message(FATAL_ERROR "XCTest Runner Generator is not installed at '${LINUXMAINTOOL}', CMake will exit." )
-endif()
+set(GYBTOOL       "${BUILD_TOOLS_BIN}/gyb")
+set(LINUXMAINTOOL "${BUILD_TOOLS_BIN}/generate_xctest_runner.rb")
 
 #
 #
@@ -42,12 +57,9 @@ function(add_gyb_dependencies gybInputFiles externalTarget)
     add_custom_target(${targetName}
             DEPENDS ${targetDependencies}
             )
+    add_dependencies(${targetName} build-tools)
     add_dependencies(${externalTarget} ${targetName})
 endfunction(add_gyb_dependencies)
-
-message(STATUS "Configuring Sticky for ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}")
-message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "")
 
 #
 # Clean the sticky package
