@@ -8,27 +8,19 @@ message(STATUS "")
 
 include(ExternalProject)
 
-#
-# Tool paths.
-#
-set(BUILD_TOOLS_ROOT ${CMAKE_SOURCE_DIR}/.build-tools)
-set(BUILD_TOOLS_BIN  ${CMAKE_SOURCE_DIR}/.build-tools/usr/local/build-tools/bin)
-
 ExternalProject_Add(
         build-tools
-        PREFIX ${BUILD_TOOLS_ROOT}
+        PREFIX build-tools
         GIT_REPOSITORY https://github.com/tonystone/build-tools.git
         GIT_TAG master
         EXCLUDE_FROM_ALL 1
-        BUILD_COMMAND ""
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${BUILD_TOOLS_ROOT}/src/build-tools
-        UPDATE_COMMAND ""
-        INSTALL_COMMAND make DESTDIR=${BUILD_TOOLS_ROOT} install
+        INSTALL_COMMAND make DESTDIR=${CMAKE_CURRENT_BINARY_DIR} install
 )
 
 #
 # Build tool paths.
 #
+set(BUILD_TOOLS_BIN  ${CMAKE_CURRENT_BINARY_DIR}/usr/local/build-tools/bin)
 set(GYBTOOL       "${BUILD_TOOLS_BIN}/gyb")
 set(LINUXMAINTOOL "${BUILD_TOOLS_BIN}/generate_xctest_runner.rb")
 
@@ -47,7 +39,7 @@ function(add_gyb_dependencies gybInputFiles externalTarget)
                 OUTPUT ${outputFile}
                 COMMAND ${GYBTOOL}
                 ARGS --line-directive '' -o ${outputFile} ${inputFile}
-                WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
         list(APPEND targetDependencies "${outputFile}")
     endforeach(inputFile)

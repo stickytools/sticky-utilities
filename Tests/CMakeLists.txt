@@ -3,8 +3,8 @@
 #
 set_directory_properties(PROPERTIES CLEAN_NO_CUSTOM 1)
 
-file(GLOB_RECURSE TEST_FILES   RELATIVE ${CMAKE_CURRENT_LIST_DIR} *.swift)
-file(GLOB_RECURSE TEST_GYB     RELATIVE ${CMAKE_CURRENT_LIST_DIR} *.gyb)
+file(GLOB_RECURSE TEST_FILES   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.swift)
+file(GLOB_RECURSE TEST_GYB     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.gyb)
 
 #
 # Remove LinuxMain.swift from the list as this will be handled separately if Linux.
@@ -16,9 +16,10 @@ list(REMOVE_ITEM TEST_FILES LinuxMain.swift)
 #
 add_custom_target(sticky-tests
         COMMAND swift test
-        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
         DEPENDS sticky-package
-        SOURCES ${TEST_FILES} ${TEST_GYB})
+        SOURCES ${TEST_FILES} ${TEST_GYB}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
 
 add_gyb_dependencies("${TEST_GYB}" sticky-tests)
 
@@ -30,7 +31,7 @@ if(UNIX AND NOT APPLE)
             COMMAND ${LINUXMAINTOOL}
             ARGS --package-path "${CMAKE_SOURCE_DIR}"
             VERBATIM
-            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
     add_custom_target(linux-main
