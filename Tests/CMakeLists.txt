@@ -26,7 +26,7 @@ add_gyb_dependencies("${TEST_GYB}" sticky-tests)
 if(UNIX AND NOT APPLE)
 
     add_custom_command(
-            DEPENDS ${TEST_FILES}
+            DEPENDS ${TEST_FILES} build-tools
             OUTPUT LinuxMain.swift
             COMMAND ${LINUXMAINTOOL}
             ARGS --package-path "${CMAKE_SOURCE_DIR}"
