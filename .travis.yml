@@ -1,0 +1,130 @@
+language: generic
+
+git:
+  submodules: false
+
+notifications:
+    slack:
+      secure: "CTPKLppC5bPDtQsBC+USvh10oaucPdwDeNmtbrUuf75xRpgO0aL5h59J9T73yeXrmE3eYJ08K7Rg9oX10VZhW78dZswyieXZZDcCKYuYsNzqRuVcpyVCkA+nMrWhMs89VH/NADwPXI8TJe+s+ZrnnDzzD76veVtSQCA15oHzhIHvzFA/DBdGGEBci0ixypwKSfXEdnA505dKvctIMJKs9VmBnS+WDGHFJCZCAdGLQzRcdp0OXvm1kAIv2wTgmjFI9V4kKiK8GSlPEnYDwhDswFTLYt5ILFcl0DXGR0CZbRceTW42D8V7iGw8fmNgovTpK7B42Nd83ZlIawoARjLB9EvuSdSGH6ZuikMwINVCl3kTy/ZO9YV8cre3UddObZtrBDUq90g5v5NmrPd0gzKjjjOBMY59zNnEdE2kNfv+c8o9DYDAVFxXd7qV7SIAHK4g2PjUL1fTbyhGTvuDovYLQDa18M0cMgml9BuSt7ZsENnmXUcvlJNCDGhd8ocb5VGODcl8WqIZQq56IGyB6FUluIqbYMTRjPIkbeKv8Uzq471jhMAbco0VgPlhT4DybzIMtRZSl0omN/YGdZCDp7Mlm70QjdZOuszzV5JzL0sXd8h6UVsCXaukU9ETtAKeusVq3VTy9oEsnxhMn/O58tQFX+kT8CyPQHIw1nGUhH2vryc="
+
+env:
+  global:
+    - PROJECT=StickyUtilities.xcodeproj
+    - SCHEME=StickyUtilities-Package
+    - TEST_SDK=iphonesimulator
+
+matrix:
+  include:
+    -
+      os: linux
+      dist: trusty
+      sudo: required
+      env:
+         - BUILD="cmake build"
+    -
+      os: osx
+      osx_image: xcode9.3
+      env:
+         - BUILD="cmake build"
+    -
+      os: linux
+      dist: trusty
+      sudo: required
+      env:
+         - BUILD="swift build"
+    -
+      os: osx
+      osx_image: xcode9.3
+      env:
+         - BUILD="swift build"
+    -
+      os: osx
+      osx_image: xcode9.3
+      env:
+         - BUILD="pod lint"
+    -
+      os: osx
+      osx_image: xcode9.3
+      env:
+         - BUILD="xcodebuild"
+         - TEST_DEST="platform=iOS Simulator,OS=11.3,name=iPhone 8"
+
+
+# don't re-build for tags so that [publish binary] is not re-run
+# https://github.com/travis-ci/travis-ci/issues/1532
+branches:
+  except:
+    - /^[0-9]/
+
+before_install:
+  #
+  # If there is a Gemfile for this os, install bundler and ask bundler to install the gems
+  #
+  - |
+    if [ -e Gemfile ]; then
+       export BUNDLE_GEMFILE=Gemfile
+       gem install bundler
+       bundler install
+    fi
+  #
+  # OSX requires swiftlint be installed
+  #
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        brew unlink swiftlint
+        brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/b4bd27d43e3df20735e2704eaf05b37ce5a6d626/Formula/swiftlint.rb
+    fi
+  #
+  # Linux requires downloading Swift and tools
+  #
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get update -y
+      sudo apt-get -y install clang-3.8 lldb-3.8 libicu-dev
+
+      wget https://swift.org/builds/swift-4.1-release/ubuntu1404/swift-4.1-RELEASE/swift-4.1-RELEASE-ubuntu14.04.tar.gz
+      tar xzvf swift-4.1-RELEASE-ubuntu14.04.tar.gz
+      export PATH=$(pwd)/swift-4.1-RELEASE-ubuntu14.04/usr/bin:$PATH
+    fi
+
+script:
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+       # Fix travis issue: https://github.com/travis-ci/travis-ci/issues/6307
+       rvm get head --auto-dotfiles || true
+    fi
+  - |
+    if [[ "$BUILD" == "cmake build"  ]]; then
+      set -e  # Fail (and stop build) on first non zero exit code
+      cmake ./
+      make tests
+      set +e
+    fi
+  - |
+    if [[ "$BUILD" == "swift build"  ]]; then
+      set -e  # Fail (and stop build) on first non zero exit code
+      swift test
+      set +e
+    fi
+  - |
+    if [[ "$BUILD" == "pod lint" ]]; then
+        set -e  # Fail (and stop build) on first non zero exit code
+        bundler exec pod repo update
+        bundler exec pod lib lint
+        set +e
+    fi
+  - |
+    if [[ "$BUILD" == "xcodebuild"  ]]; then
+        set -e  # Fail (and stop build) on first non zero exit code
+        cmake ./
+        make xcode-project
+        set -o pipefail
+        xcodebuild -project "$PROJECT" -scheme "$SCHEME" -destination "$TEST_DEST" -sdk "$TEST_SDK" -enableCodeCoverage YES build-for-testing | bundler exec xcpretty
+        xcodebuild -project "$PROJECT" -scheme "$SCHEME" -destination "$TEST_DEST" -sdk "$TEST_SDK" -enableCodeCoverage YES test              | bundler exec xcpretty
+        set +o pipefail
+        set +e
+    fi
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
