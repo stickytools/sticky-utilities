@@ -2,7 +2,6 @@ coverage:
   ignore:
     - cmake-debug-build/*
     - Documentaion/*
-    - Tests/*
     - Pods/*
     - Applications/Xcode.app/*
     - build/*
